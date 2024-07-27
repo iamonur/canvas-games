@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Minesweeper</title>
+        <style>
+            body {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+                background-color: #f0f0f0;
+                font-family: Arial, sans-serif;
+            }
+            canvas {
+                border: 1px solid #000;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="minesweeper" width="400" height="400"></canvas>
+        <script>
+            const canvas    = document.getElementById('minesweeper');
+            const ctx       = canvas.getContext('2d');
+            const rows      = 10;
+            const cols      = 10;
+            const mines     = 15;
+            const cellSize  = 40;
+            const cells     = [];
+            let gameOver    = false;
+
+            function init() {
+                for(let row = 0; row < rows; row++) {
+                    cells[row] = [];
+                    for(let col = 0; col < cols; col++) {
+                        cells[row][col] = {
+                            revealed:       false,
+                            mine:           false,
+                            neighborMines:  0,
+                            flagged:        false
+                        };
+                    }
+                }
+
+                //Mines' placement
+                let placedMines = 0;
+                while(placedMines < mines) {
+                    const row = Math.floor(Math.random() * rows);
+                    const col = Math.floor(Math.random() * cols);
+                    if(!cells[row][col].mine) {
+                        cells[row][col].mine = true;
+                        placedMines++;
+                    }
+                }
+
+                //Calc neighboring mines
+                for(let row = 0; row < rows; row++) {
+                    for(let col = 0; col < cols; col++) {
+                        if(!cells[row][col].mine) {
+                            let count = 0;
+                            for(let r = -1; r <= 1; r++) {
+                                for(let c = -1; c <= 1; c++) {
+                                    const nr = row + r;
+                                    const nc = col + c;
+                                    if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && cells[nr][nc].mine) {
+                                        count++;
+                                    }
+                                }
+                            }
+                            cells[row][col].neighborMines = count;
+                        }
+                    }
+                }
+                drawBoard();
+            }
+            
+            function drawBoard() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                for(let row = 0; row < rows; row++) {
+                    for(let col = 0; col < cols; col++) {
+                        drawCell(row, col);
+                    }
+                }
+            }
+
+            function drawCell(row, col) {
+                const cell = cells[row][col];
+                ctx.strokeStyle = '#000';
+                ctx.strokeRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                if (cell.revealed) {
+                    if(cell.mine) {
+                        ctx.fillStyle = 'red';
+                        ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                    } else {
+                        ctx.fillStyle = '#ddd';
+                        ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                        if(cell.neighborMines > 0) {
+                            ctx.fillStyle = '#000';
+                            ctx.fillText(cell.neighborMines, col * cellSize + cellSize/2, row * cellSize + cellSize/2);
+                        }
+                    }
+                } else {
+                    ctx.fillStyle = '#bbb';
+                    ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                }
+                if(cell.flagged) {
+                    ctx.fillStyle = 'blue';
+                    ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                }
+            }
+
+            function revealCell(row, col) {
+                const cell = cells[row][col];
+                if(cell.revealed || cell.flagged || gameOver) return;
+                cell.revealed = true;
+                if (cell.mine) {
+                    gameOver = true;
+                    revealAll();
+                    alert('Game Over!');
+                } else {
+                    if (cell.neighborMines === 0) {
+                        for(let r = -1; r <= 1; r++) {
+                            for(let c = -1; c <= 1; c++) {
+                                const nr = row + r;
+                                const nc = col + c;
+                                if(nr >= 0 && nc >= 0 && nr < rows && nc < cols) {
+                                    revealCell(nr, nc);
+                                }
+                            }
+                        }
+                    }
+                }
+                drawBoard();
+            }
+
+            function revealAll() {
+                for(let row = 0; row < rows; row++) {
+                    for(let col = 0; col < cols; col++) {
+                        cells[row][col].revealed = true;
+                    }
+                }
+                drawBoard();
+            }
+
+            function flagCell(row, col) {
+                const cell = cells[row][col];
+                if (cell.revealed || gameOver) return;
+                cell.flagged = !cell.flagged;
+                drawBoard();
+            }
+
+            canvas.addEventListener('click', (e) => {
+                const x = e.offsetX;
+                const y = e.offsetY;
+                const row = Math.floor(y / cellSize);
+                const col = Math.floor(x / cellSize);
+                revealCell(row, col);
+            });
+
+            canvas.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                const x = e.offsetX;
+                const y = e.offsetY;
+                const row = Math.floor(y/cellSize);
+                const col = Math.floor(x/cellSize);
+                flagCell(row,col);
+            });
+
+            init();
+
+        </script>
+    </body>
+</html>
