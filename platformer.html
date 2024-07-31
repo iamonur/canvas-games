@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Side-Scroller</title>
+        <style>
+            body {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+                background-color: #f0f0f0;
+            }
+            canvas {
+                border: 1px solid #000;
+            }
+        </style>
+    </head>
+    <canvas id="platformer" width="800" height="400"></canvas>
+    <script>
+        const canvas = document.getElementById('platformer');
+        const ctx = canvas.getContext('2d');
+        const player = {
+            x: 50,
+            y: canvas.height - 60,
+            width: 20,
+            height: 40,
+            speed: 5,
+            velocityY: 0,
+            jumpForce: 15,
+            grounded: false,
+            alive: true
+        };
+        const gravity = 0.8;
+        let platforms = [
+            {x:0, y:canvas.height - 10, width: 1000, height: 10},
+            {x:100, y:300, width:100, height:10},
+            {x:300, y:250, width:100, height:10},
+            {x:500, y:200, width:100, height:10},
+            {x:700, y:150, width:100, height:10},
+            {x:900, y:100, width:100, height:10},
+            {x:1100, y:200, width:100, height:10},
+            {x:1300, y:250, width:100, height:10},
+            {x:1500, y:300, width:100, height:10},
+            {x:1700, y:150, width:100, height:10}
+        ];
+        let coins = [
+            {x:150, y:270, width:10, height:10},
+            {x:350, y:220, width:10, height:10},
+            {x:550, y:170, width:10, height:10},
+            {x:750, y:120, width:10, height:10}
+        ];
+        let hazards = [
+            {x:250, y:canvas.height - 30, width:20, height:20},
+        ];
+        let score = 0;
+        const keys = {};
+        let cameraX = 0;
+        document.addEventListener('keydown', (e) => {keys[event.key] = true;});
+        document.addEventListener('keyup', (e) => {keys[event.key] = false;});
+        function drawPlayer() {
+            ctx.fillStyle = player.alive ? 'blue' : 'red';
+            ctx.fillRect(player.x - cameraX, player.y, player.width, player.height);
+        }
+        function drawPlatforms() {
+            ctx.fillStyle = 'green';
+            platforms.forEach(plat => {
+                ctx.fillRect(plat.x - cameraX, plat.y, plat.width, plat.height);
+            });
+        }
+        function drawCoins() {
+            ctx.fillStyle = 'gold';
+            coins.forEach(coin => {
+                ctx.beginPath();
+                ctx.arc(coin.x - cameraX + coin.width / 2, coin.y + coin.height / 2, coin.width / 2, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+        function drawHazards() {
+            ctx.fillStyle = 'red';
+            hazards.forEach(haz => {
+                ctx.fillRect(haz.x - cameraX, haz.y, haz.width, haz.height);
+            });
+        }
+        function updatePlayer() {
+            if(!player.alive) return;
+            if(keys['ArrowRight']) player.x += player.speed;
+            if(keys['ArrowLeft']) player.x -= player.speed;
+            if(keys['ArrowUp'] && player.grounded) {
+                player.velocityY = -player.jumpForce;
+                player.grounded = false;
+            }
+            player.velocityY += gravity;
+            player.y += player.velocityY;
+            if(player.y + player.height > canvas.height) {
+                player.y = canvas.height - player.height;
+                player.grounded = true;
+                player.velocityY = 0;
+            }
+
+            player.grounded = false;
+            platforms.forEach(plat => {
+                if( player.x < plat.x + plat.width
+                    && player.x + player.width > plat.x
+                    && player.y + player.height > plat.y
+                    && player.y < plat.y + plat.height) {
+                        player.grounded = true;
+                        player.velocityY = 0;
+                        player.y = plat.y - player.height;
+                    }
+            });
+
+            for (let i = coins.length - 1; i >= 0; i--) {
+                const coin = coins[i];
+                if (player.x < coin.x + coin.width && player.x + player.width > coin.x && player.y < coin.y + coin.height && player.y + player.height > coin.y) {
+                    coins.splice(i, 1);
+                    score++;
+                }
+            }
+
+            hazards.forEach(haz => {
+                if(player.x < haz.x + haz.width && player.x + player.width > haz.x && player.y < haz.y - haz.height && player.y + player.height > haz.y) {
+                    player.alive = false;
+                }
+            });
+
+            cameraX = player.x - canvas.width / 2 + player.width / 2;
+
+            if (player.x > platforms[platforms.length - 1].x - canvas.width) {
+                //Generate new.
+                generateNewPlatformsAndCoinsAndHazards();
+            }
+        }
+
+        function generateNewPlatformsAndCoinsAndHazards() {
+            const lastPlatform = platforms[platforms.length - 1];
+            const newPlatformX = lastPlatform.x + Math.random() * 200 + 100;
+            const newPlatformY = Math.random() * (canvas.height - 150) + 100;
+            platforms.push({x: newPlatformX, y: newPlatformY, width: 100, height: 10});
+
+            if (Math.random() < 0.5) {
+                const coinX = newPlatformX + Math.random() * 80;
+                const coinY = newPlatformY - 20;
+                coins.push({x: coinX, y: coinY, width: 10, height: 10});
+            }
+        
+            if (Math.random() < 0.3) {
+                const hazX = newPlatformX + Math.random() * 80;
+                const hazY = newPlatformY - 20;
+                hazards.push({x: hazX, y: hazY, width: 20, height: 20});
+            }
+
+            const floorWidth = 200;
+            while(lastPlatform.x + lastPlatform.width < newPlatformX + 500) {
+                platforms.push({x: lastPlatform.x + lastPlatform.width, y:canvas.height - 10, width: floorWidth, height: 10});
+                lastPlatform.x += floorWidth;
+            }
+        }
+
+        function drawScore() {
+            ctx.fillStyle = 'black';
+            ctx.font = '20px Arial';
+            ctx.fillText('Score: ' + score, 10, 20);
+        }
+
+        function draw() {
+            ctx.clearRect(0,0,canvas.width, canvas.height);
+            drawPlayer();
+            drawPlatforms();
+            drawCoins();
+            drawHazards();
+            drawScore();
+            updatePlayer();
+            requestAnimationFrame(draw);
+        }
+        draw();
+    </script>
+</html>
