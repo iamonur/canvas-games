@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Memory Matching Game</title>
+        <style>
+            canvas {
+                display: block;
+                margin: 0 auto;
+                background: #fff;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="memoryCanvas" width="420" height="420"></canvas>
+        <script>
+            const canvas = document.getElementById('memoryCanvas');
+            const ctx = canvas.getContext('2d');
+            const rows = 4;
+            const cols = 4;
+            const cardSize = 90;
+            const cardPadding = 10;
+            let cards = [];
+            let firstCard = null;
+            let secondCard = null;
+            let matchedPairs = 0;
+            let flipping = false;
+            function generateCards() {
+                const symbols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+                const shuffledSymbols = [...symbols, ...symbols].sort(() => 0.5 - Math.random());
+                for (let i = 0; i < rows; i++) {
+                    for (let j = 0; j < cols; j++) {
+                        const symbol = shuffledSymbols.pop();
+                        cards.push({row: i, col: j, symbol: symbol, flipped: false, matched: false});
+                    }
+                }
+            }
+
+            function drawCards() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                for (const card of cards) {
+                    const x = card.col * (cardSize + cardPadding);
+                    const y = card.row * (cardSize + cardPadding);
+                    ctx.fillStyle = card.flipped || card.matched ? '#FFDD57' : '#0095DD';
+                    ctx.fillRect(x, y, cardSize, cardSize);
+                    if (card.flipped || card.matched) {
+                        ctx.fillStyle = '#000';
+                        ctx.font = '40px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(card.symbol, x + cardSize / 2, y + cardSize / 2);
+                    }
+                }
+            }
+
+            function checkMatch() {
+                if (firstCard.symbol === secondCard.symbol) {
+                    firstCard.matched = true;
+                    secondCard.matched = true;
+                    matchedPairs++;
+                    if(matchedPairs === (rows * cols) / 2) {
+                        alert('You win!');
+                    }
+                } else {
+                    firstCard.flipped = false;
+                    secondCard.flipped = false;
+                }
+                firstCard = null;
+                secondCard = null;
+                flipping = false;
+                drawCards();
+            }
+
+            function flipCard(row, col) {
+                if (flipping) return;
+                const card = cards.find(c => c.row === row && c.col === col);
+                if (card.flipped || card.matched) return;
+                card.flipped = true;
+                drawCards();
+                if (!firstCard) {
+                    firstCard = card;
+                } else if (!secondCard) {
+                    secondCard = card;
+                    flipping = true;
+                    setTimeout(checkMatch, 1000);
+                }
+            }
+
+            canvas.addEventListener('click', e => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const row = Math.floor(y / (cardSize + cardPadding));
+                const col = Math.floor(x / (cardSize + cardPadding));
+                flipCard(row, col);
+            });
+
+            generateCards();
+            drawCards();
+
+
+        </script>
+    </body>
+</html>
