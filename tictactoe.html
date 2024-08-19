@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Tic-Tac-Toe Game with an AI opponent</title>
+        <style>
+            body {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+                background-color: #f0f0f0;
+            }
+            table {
+                border-collapse: collapse;
+            }
+            td {
+                width: 100px;
+                height: 100px;
+                text-align: center;
+                vertical-align: middle;
+                font-size: 24px;
+                border: 1px solid #000;
+                cursor: pointer;
+            }
+        </style>
+    </head>
+    <body>
+        <table id="ticTacToe">
+            <tr>
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+        </table>
+        <script>
+            const table = document.getElementById('ticTacToe');
+            let currentPlayer = 'X';
+            const cells = Array.from(table.getElementsByTagName('td'));
+
+            function checkWinner() {
+                /*
+                  0|  1|  2
+                  3|  4|  5 
+                  6|  7|  8
+                */
+
+                const combos = [
+                    [0,1,2], [3,4,5], [6,7,8], //Rows
+                    [0,3,6], [1,4,7], [2,5,8], //Columns
+                    [0,4,8], [2,4,6]           //Diagonals
+                ];
+
+                for (const combo of combos) {
+                    const [a,b,c] = combo;
+                    if (cells[a].innerText && cells[a].innerText === cells[b].innerText && cells[a].innerText === cells[c].innerText)
+                        return cells[a].innerText;
+                }
+                return cells.every(cell => cell.innerText) ? 'Draw' : null;
+        
+            }
+
+            function resetBoard() {
+                cells.forEach(cell => cell.innerText = '');
+                currentPlayer = 'X';
+            }
+
+            function checkWin(board, player) {
+                const combos = [
+                    [0,1,2], [3,4,5], [6,7,8], //Rows
+                    [0,3,6], [1,4,7], [2,5,8], //Columns
+                    [0,4,8], [2,4,6]           //Diagonals
+                ];
+
+                return combos.some(combo => {
+                    const [a,b,c] = combo;
+                    return board[a] === player && board[b] === player && board[c] === player;
+                });
+            }
+
+            function minimax(newBoard, player) {
+                const availSpots = newBoard.map((cell, index) => cell ? null : index).filter(index => index !== null);
+                if (checkWin(newBoard, 'X')) {
+                    return {score: -1000};
+                }
+                else if (checkWin(newBoard, 'O')) {
+                    return {score: 10};
+                }
+                else if (availSpots.length === 0) {
+                    return {score: 0};
+                }
+
+                const moves = [];
+                for (let i = 0; i < availSpots.length; i++) {
+                    const move = {};
+                    move.index = availSpots[i];
+                    newBoard[availSpots[i]] = player;
+                    if (player === 'O') {
+                        const result = minimax(newBoard, 'X');
+                        move.score = result.score;
+                    } else {
+                        const result = minimax(newBoard, 'O');
+                        move.score = result.score;
+                    }
+                    newBoard[availSpots[i]] == '';
+                    moves.push(move);
+                }
+                let bestMove;
+                if (player === 'O') {
+                    let bestScore = -Infinity;
+                    for (let i = 0; i < moves.length; i++) {
+                        if (moves[i].score > bestScore) {
+                            bestScore = moves[i].score;
+                            bestMove = i;
+                        }
+                    }
+                } else {
+                    let bestScore = Infinity;
+                    for (let i = 0; i < moves.length; i++) {
+                        if (moves[i].score < bestScore) {
+                            bestScore = moves[i].score;
+                            bestMove = i;
+                        }
+                    }
+                }
+                return moves[bestMove];
+            }
+
+            function handleClick(event) {
+                const cell = event.target;
+                if (cell.innerText || checkWinner()) return;
+                cell.innerText = currentPlayer;
+
+                const winner = checkWinner();
+
+                if(winner) {
+                    setTimeout(() => {
+                        alert(winner === 'Draw' ? 'It\'s a draw!' : `${winner} wins!`);
+                        resetBoard();
+                    }, 10);
+                } else {
+                    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                    if (currentPlayer ==='O') {
+                        setTimeout(aiMove, 500); //So that it will look like it is thinking of its next move.
+                    }
+                }
+            }
+
+            function aiMove() {
+                const bestMove = minimax(cells.map(cell => cell.innerText), 'O').index;
+                cells[bestMove].innerText = 'O';
+                const winner = checkWinner();
+
+                if(winner) {
+                    setTimeout(() => {
+                        alert(winner === 'Draw' ? 'It\'s a draw!' : `${winner} wins!`);
+                        resetBoard();
+                    }, 10);
+                } else {
+                    currentPlayer = 'X';
+                }
+
+            }
+
+            table.addEventListener('click', handleClick);
+        </script>
+    </body>
+</html>
