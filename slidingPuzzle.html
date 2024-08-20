@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Sliding Puzzle</title>
+        <style>
+            body {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                background-color: #f0f0f0;
+            }
+            canvas {
+                background-color: #ffffff;
+                border: 2px solid #000;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="puzzleCanvas" width="400" height="400"></canvas>
+        <script>
+            const canvas = document.getElementById('puzzleCanvas');
+            const ctx = canvas.getContext('2d');
+            const size = 4;
+            const tileCount = size * size - 1;
+            const tileSize = canvas.width / size;
+            let tiles = [];
+            let empty = {x: size - 1, y: size - 1};
+            let moves = 0;
+
+            function init() {
+                let numbers = Array.from({length: tileCount}, (_, i) => i + 1);
+                do {
+                    shuffle(numbers);
+                } while(!isSolvable(numbers)); //Do not give any non-solvable puzzle.
+                numbers.push(null);
+
+                tiles = []
+                for (let i = 0; i < size; i++) {
+                    tiles[i] = numbers.slice(i * size, (i + 1) * size);
+                }
+                empty = {x: size - 1, y: size - 1};
+                draw();
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                for (let i = 0; i < size; i++) {
+                    for (let j = 0; j < size; j++) {
+                        let number = tiles[i][j];
+                        if(number) {
+                            drawTile(i, j, number);
+                        }
+                    }
+                }
+            }
+
+            function isSolvable(array) {
+                let inversions = 0;
+                for(let i = 0; i < array.length; i++) {
+                    for(let j = i + 1; j <array.length; j++) {
+                        if(array[i] && array[j] && array[i] > array[j])
+                            inversions++;
+                    }
+                }
+                return inversions % 2 === 0;
+            }
+
+            function drawTile(x, y, number) {
+                ctx.fillStyle = '#3498db';
+                ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+                ctx.strokeRect(x * tileSize, y * tileSize, tileSize, tileSize);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '32px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(number, (x + 0.5) * tileSize, (y + 0.5) * tileSize);
+            }
+
+            function shuffle(array) {
+                for(let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+            }
+
+            canvas.addEventListener('click', (e) => {
+                const x = Math.floor(e.offsetX / tileSize);
+                const y = Math.floor(e.offsetY / tileSize);
+                moveTile(x, y);
+            });
+
+            function moveTile(y, x) {
+                if((Math.abs(x - empty.x) === 1 && y === empty.y) || (Math.abs(y - empty.y) === 1 && x === empty.x)) {
+                    tiles[empty.y][empty.x] = tiles[y][x];
+                    tiles[y][x] = null;
+                    empty = {x, y};
+                    moves++;
+                    draw();
+                    checkWin();
+                }
+            }
+
+            function checkWin() {
+                let correct = 0;
+                for(let i = 0; i < size; i++) {
+                    for (let j = 0; j < size; j++) {
+                        if (tiles[i][j] === (i * size + j + 1) || (i === size - 1 && j === size - 1 && tiles[i][j] === null))
+                            correct++;
+                    }
+                }
+                if (correct === size * size) {
+                    setTimeout(() => {
+                        alert(`Congratulations! You've solved this puzzle in ${moves} moves!`);
+                    }, 200);
+                }
+            }
+
+            init();
+        </script>
+    </body>
+</html>
