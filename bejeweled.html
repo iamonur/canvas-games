@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang = "en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Bejeweled Clone</title>
+        <style>
+            body {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+                background-color: #f0f0f0;
+            }
+            canvas {
+                border: 2px solid #000;
+                background-color: #fff;
+            }
+            #score {
+                font-size: 24px;
+                margin-bottom: 20px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="score">Score: 0</div>
+        <canvas id="gameCanvas" width="600" height="600"></canvas>
+        <script>
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            const scoreElement = document.getElementById('score');
+
+            const ROWS = 8;
+            const COLS = 8;
+            const TILE_SIZE = 75; //75*8 = 600
+
+            const colors = ['red', 'green', 'blue', 'yellow', 'purple', 'orange'];
+            let grid = []
+            let selectedTile = null;
+            let matches = []
+            let score = 0;
+
+            function checkMatches() {
+                let matchList = [];
+                //Row match
+                for (let row = 0; row < ROWS; row++) {
+                    for (let col = 0; col < COLS; col++) {
+                        const color = grid[row][col];
+                        if(grid[row][col+1] === color && grid[row][col+2] === color) {
+                            matchList.push({row, col});
+                            matchList.push({row, col: col + 1});
+                            matchList.push({row, col: col + 2});
+                        }
+                    }
+                }
+
+                //Column match
+                for (let col = 0; col < COLS; col++) {
+                    for (let row = 0; row < ROWS - 2; row++) {
+                        const color = grid[row][col];
+                        if(grid[row + 1][col] === color && grid[row + 2][col] === color) {
+                            matchList.push({row, col});
+                            matchList.push({row: row + 1, col});
+                            matchList.push({row: row + 2, col});
+                        }
+                    }
+                }
+
+                matchList = matchList.filter((match, index, self) => 
+                    index === self.findIndex((m) => (m.row === match.row && m.col === match.col))
+                );
+
+                return matchList;
+            }
+        
+            function handleMatches() {
+                for (const match of matches) {
+                    grid[match.row][match.col] = null;
+                }
+                dropTiles();
+                fillEmptyTiles();
+                updateScore(matches.length);
+                matches = checkMatches();
+                if (matches.length > 0) {
+                    setTimeout(() => {
+                        handleMatches();
+                        drawGrid();
+                    }, 200);
+                }
+            }
+
+            function dropTiles() {
+                for (let col = 0; col < COLS; col++) {
+                    for (let row = ROWS - 1; row >= 0; row--) {
+                        if (!grid[row][col]) { //null means empty tile.
+                            for(let rowAbove = row - 1; rowAbove >= 0; rowAbove--) {
+                                if (grid[rowAbove][col]) {
+                                    grid[row][col] = grid[rowAbove][col];
+                                    grid[rowAbove][col] = null;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            function fillEmptyTiles() {
+                for (let row = 0; row < ROWS; row++) {
+                    for (let col = 0; col < COLS; col++) {
+                        if(!grid[row][col]) {
+                            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                            grid[row][col] = randomColor;
+                        }
+                    }
+                }
+            }
+
+            function updateScore(matchCount) {
+                score += matchCount * 10;
+                scoreElement.textContent = `Score: ${score}`;
+            }
+
+            function initGrid() {
+                for (let row = 0; row < ROWS; row++) {
+                    grid[row] = [];
+                    for (let col = 0; col < COLS; col++) {
+                        const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                        grid[row][col] = randomColor;
+                    }
+                }
+                alert('Here');
+                handleInitialMatches();
+            }
+
+            function drawGrid() {
+                for(let row = 0; row < ROWS; row++) {
+                    for(let col = 0; col < COLS; col++) {
+                        ctx.fillStyle = grid[row][col] ? grid[row][col] : 'black';
+                        ctx.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        ctx.strokeRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    }
+                }
+            }
+
+            function handleInitialMatches() {
+                matches = checkMatches();
+                while(matches.length > 0) {
+                    handleMatches();
+                    matches = checkMatches();
+                }
+                drawGrid();
+            }
+
+            canvas.addEventListener('click', (event) => {
+                const x = event.offsetX;
+                const y = event.offsetY;
+                const col = Math.floor(x / TILE_SIZE);
+                const row = Math.floor(y / TILE_SIZE);
+
+                if(!selectedTile) { //then select one to slide.
+                    selectedTile = {row, col};
+                } else {
+                    swapTiles(selectedTile.row, selectedTile.col, row, col);
+                    let matches = checkMatches();
+                    if(matches.length > 0) {
+                        setTimeout(() => {
+                            handleMatches();
+                            selectedTile = null;
+                            drawGrid();
+                        });
+                    } else {
+                        swapTiles(selectedTile.row, selectedTile.col, row, col);
+                        selectedTile = null;
+                        drawGrid();
+                    }
+                }
+            });
+
+            function swapTiles(row1, col1, row2, col2) {
+                const temp = grid[row1][col1];
+                grid[row1][col1] = grid[row2][col2];
+                grid[row2][col2] = temp;
+            }
+
+            initGrid();
+            drawGrid();
+        </script>
+    </body>
+</html>
